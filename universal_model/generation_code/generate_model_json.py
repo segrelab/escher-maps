@@ -14,10 +14,6 @@ with open('../ModelSEEDDatabase/biochemistry/compounds.json') as f:
 # Create a new COBRA model
 model = cobra.Model('ModelSEED_Universal_Model')
 
-# Add compartments to the model
-# FIXME: This doesn't work- I'm not sure I can set the compartments directly
-model.compartments = {'c0': 'cytosol', 'e0': 'extracellular'}
-
 # Add all the metabolites to the model
 for compound in modelseed_compounds:
     # Add an internal metabolite (i.e. ending with '_c0')
@@ -37,7 +33,10 @@ for compound in modelseed_compounds:
                                            # TODO: Add annotation with aliases
                                            ))
     # Add an exchange reaction for the external metabolite
-    exchange_reaction = cobra.Reaction('EX_' + compound['id'] + '_e0')
+    exchange_reaction ={'id': 'EX_' + compound['id'] + '_e0',
+                        'name': 'Exchange reaction for ' + compound['name'],
+                        'metabolites': {compound['id'] + '_e0': -1}}
+    model.add_reaction(cobra.io.dict._reaction_from_dict(exchange_reaction, model))
 
 # Add all the reactions to the model
 for reaction in modelseed_reactions:
@@ -46,7 +45,7 @@ for reaction in modelseed_reactions:
     new_reaction.name = reaction['name']
     new_reaction.lower_bound = reaction['minFlux']
     new_reaction.upper_bound = reaction['maxFlux']
-
+    # If is transport, change the metabolites to be in the correct compartments
     # Add all the metabolites to the reaction
     for metabolite in reaction['stoichiometry']:
         # Check if the metabolite already exists in the model
